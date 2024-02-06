@@ -1,0 +1,25 @@
+ARG NODE_VERSION=18
+
+FROM node:$NODE_VERSION-buster as base
+
+WORKDIR /app
+
+FROM base as builder
+
+COPY package.json ./
+RUN yarn install --frozen-lockfile
+
+COPY . .
+
+RUN npm install
+RUN npm run build
+
+FROM nginx:latest as production
+WORKDIR /app
+
+COPY --from=builder /app/dist/ /app/
+COPY --from=builder /app/nginx.conf /etc/nginx/nginx.conf
+
+ENV CLIENT_PORT=${CLIENT_PORT}
+EXPOSE $CLIENT_PORT
+CMD [ "nginx", "-g", "daemon off;" ]
